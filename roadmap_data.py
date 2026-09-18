@@ -35,7 +35,7 @@ NOTES = [
      "例外：V2 的 reap-agentic-v1-1/cpulean 用 v4.33.0-rc2；formal-imo / miniF2F / Nexus 用 v4.27.0。"),
     ("私有仓库",
      "reap-alpha-proof 与 reap-new-update-model-value-head 为私有仓库（登录后可开）；"
-     "其余 10 个仓库均公开。"),
+     "其余 14 个仓库均公开。"),
     ("Windows/Edge 打不开 wsl.localhost？",
      "你的 C:\\Users\\zhai\\.wslconfig 使用 networkingMode=mirrored，此模式下 \\\\wsl.localhost 不可用（WSL 已知限制）。"
      "在 Edge 里请选「Windows · VSCode 跳转」模式：路径点击会交给 VS Code 打开（WSL 用 remote-wsl，F/E 盘用 Remote-SSH）。"),
@@ -394,9 +394,13 @@ MODULES = [
             {
                 "id": "p8", "title": "Part 8 · GitHub / HuggingFace / 论文总表",
                 "items": [
-                    {"type": "table", "id": "t_gh", "title": "GitHub：wufuju2023-cell（10 公开 + 2 私有）",
+                    {"type": "table", "id": "t_gh", "title": "GitHub：wufuju2023-cell（14 公开 + 2 私有）",
                      "cols": ["仓库", "简介", "最近推送"],
                      "rows": [
+                         ["reap-roadmap", "本导航页（GitHub 版 HTML + 生成器）", "2026-09-18"],
+                         ["reap-source-code-explain", "REAP 源码精读 8 篇（新公开）", "2026-09-18"],
+                         ["Lean-source-code-learning-to-know-reap", "Lean4 源码学习 13 篇（新公开）", "2026-09-18"],
+                         ["alphaproof-official-materials", "AlphaProof 官方伪代码+补充材料（新公开）", "2026-09-18"],
                          ["alpha-proof-original-math-version", "AlphaProof 数学重构档案（21 篇）", "2026-09-09"],
                          ["mcts-theory-learning", "MCTS+RL 数学笔记（模块 1-6）", "2026-09-17"],
                          ["gap-advance-plan-of-nano-proof-v1-m1", "nano 差距/超越/路线分析", "2026-09-15"],
