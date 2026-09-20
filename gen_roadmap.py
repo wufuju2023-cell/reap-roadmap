@@ -3,12 +3,13 @@
 import html
 import json
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from roadmap_data import META, NOTES, QUICK, MODULES  # noqa: E402
+from roadmap_data import META, NOTES, QUICK, MODULES, GUIDES  # noqa: E402
 
 
 def load_exists():
@@ -32,8 +33,7 @@ GH_RULES = [
      "https://github.com/wufuju2023-cell/reap-source-code-explain", "main", False),
     ("/home/zhai/project/reap/new-update-model",
      "https://github.com/wufuju2023-cell/reap-new-update-model", "master", False),
-    ("/home/zhai/project/reap",
-     "https://github.com/wufuju2023-cell/reap-alpha-proof", "main", True),
+    ("/home/zhai/project/reap", None, None, True),
     ("/home/zhai/project/gap-advance-plan-of-nano-proof-v1-m1",
      "https://github.com/wufuju2023-cell/gap-advance-plan-of-nano-proof-v1-m1", "main", False),
     ("/home/zhai/project/alphaproof-nexus-results",
@@ -55,6 +55,8 @@ def gh_url(path):
     """Map a WSL path to a GitHub URL. Returns (url, short_label) or (None, None)."""
     for prefix, repo, branch, root_only in GH_RULES:
         if path == prefix or path.startswith(prefix + "/"):
+            if repo is None:
+                return None, None
             rel = path[len(prefix):].lstrip("/")
             if root_only or not rel:
                 return repo, repo.split("/")[-1]
@@ -86,14 +88,44 @@ REMOTE_GH_RULES = [
      "https://github.com/leanprover-community/mathlib4", "master", True),
     ("/home/a/文档/mcts-theory-learning",
      "https://github.com/wufuju2023-cell/mcts-theory-learning", "main", False),
-    ("/home/a/文档/jev-and-open-rebuilt/alpha-proof",
-     "https://github.com/wufuju2023-cell/jev-alpha-proof-analysis", "main", False),
-    ("/home/a/文档/jev-and-open-rebuilt",
-     "https://github.com/wufuju2023-cell/jev-alpha-proof-analysis", "main", False),
+    ("/home/a/文档/hsy-alphaproof-public",
+     "https://github.com/hsy221329/hsy-alphaproof-public", "main", False),
+    ("/mnt/gloway/projects/reap-gap-advance-alpha-proof",
+     "https://github.com/wufuju2023-cell/reap-gap-advance-alpha-proof", "main", False),
+    ("/mnt/gloway/projects/multi-agent-rl-alpha-proof",
+     "https://github.com/wufuju2023-cell/multi-agent-rl-alpha-proof", "main", False),
+]
+
+MLT_REPO = "https://github.com/wufuju2023-cell/ml-theory-reference"
+TOPIC_NAMES = [
+    "Transformer数学理论参考资料", "ttt-参考资料", "样本效率理论参考资料",
+    "信息几何理论参考资料", "RLVR-OPSD-参考资料", "残差连接理论参考资料",
+    "贝叶斯概率与机器学习参考资料", "随机微分方程与机器学习参考资料",
+    "高维概率论参考资料", "扩散模型数学理论参考资料", "LoRA微调数学理论参考资料",
+    "RNN-LSTM数学理论参考资料", "元学习参考资料",
 ]
 
 
+JEV_REPO = "https://github.com/wufuju2023-cell/jev-alpha-proof-analysis"
+
+
 def gh_url_remote(path):
+    if path.startswith("/home/a/文档/jev-and-open-rebuilt"):
+        rest = path[len("/home/a/文档/jev-and-open-rebuilt"):].lstrip("/")
+        if not rest:
+            return f"{JEV_REPO}/tree/main", "jev-alpha-proof-analysis"
+        tail = rest if rest.startswith("alpha-proof") else "jev/" + rest
+        kind = "blob" if "." in tail.split("/")[-1] else "tree"
+        return f"{JEV_REPO}/{kind}/main/{tail}", "/".join(tail.split("/")[-2:])
+    if path.startswith("/home/a/文档/"):
+        rel = path[len("/home/a/文档/"):]
+        top = rel.split("/")[0]
+        if top in TOPIC_NAMES:
+            sub = rel[len(top):].lstrip("/")
+            tail = "topics/" + top + (("/" + sub) if sub else "")
+            if sub and "." in sub.split("/")[-1]:
+                return f"{MLT_REPO}/blob/main/{tail}", sub
+            return f"{MLT_REPO}/tree/main/{tail}", tail
     for prefix, repo, branch, root_only in REMOTE_GH_RULES:
         if path == prefix or path.startswith(prefix + "/"):
             if repo is None:
@@ -138,18 +170,37 @@ def e(s):
     return html.escape(str(s), quote=True)
 
 
+
+def hu(url):
+    return str(url).replace(" ", "%20")
+
+
+MD_LINK = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
+
+
+def md(s):
+    s = str(s)
+    out, pos = [], 0
+    for m in MD_LINK.finditer(s):
+        out.append(e(s[pos:m.start()]))
+        out.append(f'<a href="{e(hu(m.group(2)))}" target="_blank" rel="noopener">{e(m.group(1))}</a>')
+        pos = m.end()
+    out.append(e(s[pos:]))
+    return "".join(out)
+
+
 def chip(m, p):
     if VARIANT == "public":
         url, short = gh_any(m, p)
         if not url:
             return ""
-        return (f'<a class="lbtn l-github ghpath" href="{e(url)}" target="_blank" '
+        return (f'<a class="lbtn l-github ghpath" href="{e(hu(url))}" target="_blank" '
                 f'rel="noopener" title="{e(url)}">GitHub · {e(short)}</a>')
     if VARIANT == "gh" and m == "wsl":
         url, short = gh_url(p)
         if not url:
             return ""
-        return (f'<a class="lbtn l-github ghpath" href="{e(url)}" target="_blank" '
+        return (f'<a class="lbtn l-github ghpath" href="{e(hu(url))}" target="_blank" '
                 f'rel="noopener" title="{e(p)}">GitHub · {e(short)}</a>')
     st = ex_state(m, p)
     cls = "pchip"
@@ -173,7 +224,7 @@ def qlink(m, p, label):
             url, _ = gh_url(p) if m == "wsl" else (None, None)
         if not url:
             return ""
-        return (f'<a class="qlink ghlink" href="{e(url)}" target="_blank" '
+        return (f'<a class="qlink ghlink" href="{e(hu(url))}" target="_blank" '
                 f'rel="noopener" title="{e(url)}">{e(label)}</a>')
     st = ex_state(m, p)
     cls = "qlink" + (" miss" if st is False else "")
@@ -182,11 +233,18 @@ def qlink(m, p, label):
 
 def link_btn(l):
     kind, url, label = l
-    return f'<a class="lbtn l-{e(kind)}" href="{e(url)}" target="_blank" rel="noopener">{e(label)}</a>'
+    return f'<a class="lbtn l-{e(kind)}" href="{e(hu(url))}" target="_blank" rel="noopener">{e(label)}</a>'
+
+
+PUBLIC_TAG_MAP = {"远程": "云端"}
 
 
 def render_card(c):
-    tags = "".join(f'<span class="tag {TAG_CLASS.get(t, "t-ref")}">{e(t)}</span>' for t in c["tags"])
+    tag_items = []
+    for t in c["tags"]:
+        label = PUBLIC_TAG_MAP.get(t, t) if VARIANT == "public" else t
+        tag_items.append(f'<span class="tag {TAG_CLASS.get(t, "t-ref")}">{e(label)}</span>')
+    tags = "".join(tag_items)
     if VARIANT == "public":
         kept = [(m, p) for m, p in c["paths"] if gh_any(m, p)[0]]
         dropped = len(c["paths"]) - len(kept)
@@ -202,26 +260,32 @@ def render_card(c):
         items = "".join(qlink(m, p, lbl) for lbl, m, p in c["quick"])
         quick = f'<div class="quick"><span class="ql-t">入口</span>{items}</div>'
     reads = f'<div class="reads">读法：{e(c["reads"])}</div>' if c["reads"] else ""
-    muted = (f'<div class="muted">（{dropped} 条本机内容未上云，已省略）</div>'
+    lead = f'<div class="lead">{e(c["lead"])}</div>' if c.get("lead") else ""
+    muted = (f'<div class="muted">（{dropped} 项未公开材料已省略）</div>'
              if dropped else "")
     if VARIANT == "public":
-        search = " ".join([c["title"], c["desc"]] + [q[0] for q in c["quick"]])
+        search = " ".join([c["title"], c["desc"], c.get("lead", "")] + [q[0] for q in c["quick"]])
     else:
-        search = " ".join([c["title"], c["desc"]] + [p for _, p in kept] + [q[0] for q in c["quick"]])
+        search = " ".join([c["title"], c["desc"], c.get("lead", "")] + [p for _, p in kept] + [q[0] for q in c["quick"]])
     return (f'<div class="card" id="{e(c["id"])}" data-s="{e(search.lower())}">'
             f'<div class="ch"><span class="ct">{e(c["title"])}</span>{tags}</div>'
-            f'<div class="cd">{e(c["desc"])}</div>{reads}'
+            f'<div class="cd">{e(c["desc"])}</div>{lead}{reads}'
             f'<div class="paths">{paths}</div>{muted}{quick}'
             f'<div class="links">{links}</div></div>')
+
+
+def plain(s):
+    return MD_LINK.sub(r"\1", str(s))
 
 
 def render_table(t):
     head = "".join(f"<th>{e(c)}</th>" for c in t["cols"])
     rows = ""
     for r in t["rows"]:
-        tds = "".join(f"<td>{e(v)}</td>" for v in r)
-        rows += f"<tr data-s=\"{e(' '.join(str(v) for v in r).lower())}\">{tds}</tr>"
-    return (f'<div class="tablewrap" id="{e(t["id"])}"><div class="tcap">{e(t["title"])}</div>'
+        tds = "".join(f"<td>{md(v)}</td>" for v in r)
+        search = " ".join(plain(v) for v in r)
+        rows += f'<tr data-s="{e(search.lower())}">{tds}</tr>'
+    return (f'<div class="tablewrap" id="{e(t["id"])}"><div class="tcap">{md(t["title"])}</div>'
             f'<table><thead><tr>{head}</tr></thead><tbody>{rows}</tbody></table></div>')
 
 
@@ -253,13 +317,21 @@ def quick_section():
             f'<tbody>{rows}</tbody></table></div>')
 
 
+def guides_section():
+    out = ['<section id="guides"><h3>学习顺序 · 开发顺序 · 模块上下文</h3><div class="guides">']
+    for t in GUIDES:
+        out.append(render_table(t))
+    out.append("</div></section>")
+    return "\n".join(out)
+
+
 ACTIVE_MODULES = MODULES
 ACTIVE_NOTES = NOTES
 
 
 def notes_section():
     out = ['<div class="notes">']
-    for t, body in ACTIVE_NOTES:
+    for t, body in [(n[0], n[1]) for n in ACTIVE_NOTES]:
         out.append(f'<div class="note"><span class="nt">{e(t)}</span>{e(body)}</div>')
     out.append("</div>")
     return "\n".join(out)
@@ -268,6 +340,7 @@ def notes_section():
 def toc():
     out = ['<nav id="toc"><div class="toc-t">目录</div>']
     out.append('<a class="toc-l toc-top" href="#quick">我该读哪个？</a>')
+    out.append('<a class="toc-l toc-top" href="#guides">学习 / 开发 / 上下文</a>')
     for mod in ACTIVE_MODULES:
         out.append(f'<div class="toc-m">{e(mod["title"])}</div>')
         for part in mod["parts"]:
@@ -344,6 +417,10 @@ th{color:#333;background:#fafbfc;white-space:nowrap}
 footer{max-width:1280px;margin:0 auto;padding:10px 20px 40px;color:var(--mut);font-size:12px}
 .hidden{display:none !important}
 .muted{color:var(--mut);font-size:12px;margin-top:4px}
+.lead{color:#2f3a46;font-size:12.8px;margin-top:4px;padding-left:8px;border-left:3px solid #dbe4ee}
+.plead{color:#44505e;font-size:13px;margin:-4px 0 10px;padding-left:9px;border-left:3px solid #cfe0f4}
+.guides .tablewrap{margin:10px 0}
+.guides td{font-size:12.3px}
 kbd{background:#eef1f5;border-radius:3px;padding:0 4px;font-size:11px}
 #navbtn{display:none;border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 10px;font-size:12.5px;cursor:pointer;color:var(--fg)}
 #navbtn:hover{border-color:var(--acc);color:var(--acc)}
@@ -519,10 +596,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
 
 PUBLIC_DROP_TABLES = {"t_gloway", "t_lexar", "t_win"}
 PUBLIC_DROP_CARDS = {"c_lean_wsl"}
-PUBLIC_TITLE_OVERRIDE = {
-    "q3": "Part 3 · 主题参考资料（本机资料，未上云）",
-    "p7": "Part 7 · Lean 环境（云端镜像）",
-}
+PUBLIC_TITLE_OVERRIDE = {}
 
 
 def main():
@@ -563,13 +637,12 @@ def main():
             if parts:
                 modules.append({**mod, "parts": parts})
         ACTIVE_MODULES = modules
-        keep_notes = ("价值头语义（重要更正）", "Lean 版本")
-        ACTIVE_NOTES = [n for n in NOTES if n[0] in keep_notes]
+        ACTIVE_NOTES = [n for n in NOTES if not n[2]]
 
     if VARIANT == "public":
         modes = []
     elif VARIANT == "gh":
-        modes = ["vscode", "remote"]
+        modes = ["vscode"]
     else:
         modes = ["vscode", "remote", "wsl"]
     mode_labels = {"vscode": "Windows · 用 VSCode 跳转", "remote": "在 my-new-linux 上打开",
@@ -592,17 +665,20 @@ def main():
     body.append('<main>')
     body.append(notes_section())
     body.append(quick_section())
+    body.append(guides_section())
     for mod in ACTIVE_MODULES:
         body.append(f'<h2>{e(mod["title"])}</h2>')
         for part in mod["parts"]:
             body.append(f'<section id="{part["id"]}"><h3>{e(part["title"])}</h3>')
+            if part.get("lead"):
+                body.append(f'<div class="plead">{e(part["lead"])}</div>')
             body.append('<div class="cards2">')
             body.append(render_items(part["items"]))
             body.append('</div></section>')
     body.append("</main></div>")
     body.append('<div id="backdrop"></div>')
     if VARIANT == "public":
-        foot = ('本页为公开版：不含任何本机路径，全部链接均为云端资源（GitHub / HuggingFace / arXiv）。'
+        foot = ('本页为公开版：全部链接均为云端资源（GitHub / HuggingFace / arXiv）。'
                 '窄屏或放大后点左上角「☰ 目录」展开侧栏。')
     elif VARIANT == "gh":
         foot = ('本页为 GitHub 版：所有 WSL 本机路径均已替换为 GitHub 链接（含新公开的 '
