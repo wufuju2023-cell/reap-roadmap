@@ -35,7 +35,7 @@ NOTES = [
      "例外：V2 的 reap-agentic-v1-1/cpulean 用 v4.33.0-rc2；formal-imo / miniF2F / Nexus 用 v4.27.0。"),
     ("私有仓库",
      "reap-alpha-proof 与 reap-new-update-model-value-head 为私有仓库（登录后可开）；"
-     "其余 14 个仓库均公开。"),
+     "其余 15 个仓库均公开。"),
     ("Windows/Edge 打不开 wsl.localhost？",
      "你的 C:\\Users\\zhai\\.wslconfig 使用 networkingMode=mirrored，此模式下 \\\\wsl.localhost 不可用（WSL 已知限制）。"
      "在 Edge 里请选「Windows · VSCode 跳转」模式：路径点击会交给 VS Code 打开（WSL 用 remote-wsl，F/E 盘用 Remote-SSH）。"),
@@ -64,6 +64,9 @@ QUICK = [
     ("7. V2（实验性，非主线）",
      "explain 7→8 → v2 spec 00→04 → v2 code README",
      ["c_v2_spec", "c_v2_code"]),
+    ("8. Jev 校准决策（扩展）",
+     "Jev 00→03→12；分析子系列 00→02→03→04；实验设计看 07",
+     ["c_jev_ap"]),
 ]
 
 MODULES = [
@@ -394,10 +397,11 @@ MODULES = [
             {
                 "id": "p8", "title": "Part 8 · GitHub / HuggingFace / 论文总表",
                 "items": [
-                    {"type": "table", "id": "t_gh", "title": "GitHub：wufuju2023-cell（14 公开 + 2 私有）",
+                    {"type": "table", "id": "t_gh", "title": "GitHub：wufuju2023-cell（15 公开 + 2 私有）",
                      "cols": ["仓库", "简介", "最近推送"],
                      "rows": [
-                         ["reap-roadmap", "本导航页（GitHub 版 HTML + 生成器）", "2026-09-18"],
+                         ["reap-roadmap", "本导航页（公开版 HTML + 生成器）", "2026-09-20"],
+                         ["jev-alpha-proof-analysis", "Jev × AlphaProof 校准分析（jev/ + alpha-proof/）", "2026-09-20"],
                          ["reap-source-code-explain", "REAP 源码精读 8 篇（新公开）", "2026-09-18"],
                          ["Lean-source-code-learning-to-know-reap", "Lean4 源码学习 13 篇（新公开）", "2026-09-18"],
                          ["alphaproof-official-materials", "AlphaProof 官方伪代码+补充材料（新公开）", "2026-09-18"],
@@ -489,6 +493,31 @@ MODULES = [
                          ["RNN-LSTM数学理论参考资料", "00-导读与目录.md", "序列建模背景（选读）"],
                          ["元学习参考资料", "00-导读与目录.md", "TTT/自改进（V1-9/P9）"],
                      ]},
+                ],
+            },
+            {
+                "id": "q4", "title": "Part 4 · Jev 与校准决策（新增）",
+                "items": [
+                    C("c_jev", "Jev 全景笔记（00-13）",
+                      "TypeSafe System One/Jev：校准决策、RLCD、API 原语、三种开源复刻路线、数学推导与开放问题。",
+                      tags=["预备", "参考"],
+                      paths=[("remote", "/home/a/文档/jev-and-open-rebuilt")],
+                      links=[("github", "https://github.com/wufuju2023-cell/jev-alpha-proof-analysis/tree/main/jev", "GitHub · jev/")],
+                      quick=[("00 总览", "remote", "/home/a/文档/jev-and-open-rebuilt/00-总览与导读.md"),
+                             ("03 架构/API", "remote", "/home/a/文档/jev-and-open-rebuilt/03-Jev架构与API机制.md"),
+                             ("08 校准数学", "remote", "/home/a/文档/jev-and-open-rebuilt/08-数学I-概率校准与Proper Scoring Rules.md"),
+                             ("09 RLCD 推导", "remote", "/home/a/文档/jev-and-open-rebuilt/09-数学II-强化学习与RLCD推导.md")],
+                      reads="00→01→03→12（工程）；08→09→10→11（数学）"),
+                    C("c_jev_ap", "Jev × AlphaProof 分析（00-08）★",
+                      "校准打分头 vs 价值头：协议绑定、proper 损失、删失纠正、并行打分、预算/教师路由与实验协议。",
+                      tags=["核心", "分析"],
+                      paths=[("remote", "/home/a/文档/jev-and-open-rebuilt/alpha-proof")],
+                      links=[("github", "https://github.com/wufuju2023-cell/jev-alpha-proof-analysis/tree/main/alpha-proof", "GitHub · alpha-proof/")],
+                      quick=[("00 总览", "remote", "/home/a/文档/jev-and-open-rebuilt/alpha-proof/00-总览与导读.md"),
+                             ("03 评分规则", "remote", "/home/a/文档/jev-and-open-rebuilt/alpha-proof/03-Proper评分规则与价值目标的统一语言.md"),
+                             ("04 自采样定理", "remote", "/home/a/文档/jev-and-open-rebuilt/alpha-proof/04-RLCD自采样定理与引导目标.md"),
+                             ("07 设计与实验", "remote", "/home/a/文档/jev-and-open-rebuilt/alpha-proof/07-可迁移设计清单与实验协议.md")],
+                      reads="00→02→03→04→05；只读两章：03 与 04"),
                 ],
             },
         ],

@@ -64,6 +64,55 @@ def gh_url(path):
     return None, None
 
 
+REMOTE_GH_RULES = [
+    ("/mnt/gloway/projects/reap-new-update-model-value-head", None, None, True),
+    ("/mnt/gloway/projects/reap-new-update-model/nanoproof",
+     "https://github.com/kripner/nanoproof", "main", True),
+    ("/mnt/gloway/projects/reap-new-update-model-master",
+     "https://github.com/wufuju2023-cell/reap-new-update-model", "master", False),
+    ("/mnt/gloway/projects/reap-new-update-model",
+     "https://github.com/wufuju2023-cell/reap-new-update-model", "master", False),
+    ("/mnt/gloway/projects/reap-publicize-work",
+     "https://github.com/wufuju2023-cell/reap-rsi-public", "master", False),
+    ("/mnt/gloway/projects/reap-rsi-public",
+     "https://github.com/wufuju2023-cell/reap-rsi-public", "master", False),
+    ("/mnt/gloway/projects/reap-agentic-v1-1",
+     "https://github.com/wufuju2023-cell/reap-agentic-v1-1", "main", False),
+    ("/mnt/gloway/projects/v1-1-agentic-tool",
+     "https://github.com/wufuju2023-cell/v1-1-agentic-tool", "main", False),
+    ("/mnt/gloway/projects/9-14-project-my-new-linux",
+     "https://github.com/wufuju2023-cell/9-14-project-my-new-linux", "main", False),
+    ("/mnt/gloway/projects/lean-corpus/mathlib4",
+     "https://github.com/leanprover-community/mathlib4", "master", True),
+    ("/home/a/文档/mcts-theory-learning",
+     "https://github.com/wufuju2023-cell/mcts-theory-learning", "main", False),
+    ("/home/a/文档/jev-and-open-rebuilt/alpha-proof",
+     "https://github.com/wufuju2023-cell/jev-alpha-proof-analysis", "main", False),
+    ("/home/a/文档/jev-and-open-rebuilt",
+     "https://github.com/wufuju2023-cell/jev-alpha-proof-analysis", "main", False),
+]
+
+
+def gh_url_remote(path):
+    for prefix, repo, branch, root_only in REMOTE_GH_RULES:
+        if path == prefix or path.startswith(prefix + "/"):
+            if repo is None:
+                return None, None
+            rel = path[len(prefix):].lstrip("/")
+            if root_only or not rel:
+                return repo, repo.split("/")[-1]
+            if rel == "app/VALUE_HEAD.md":
+                return f"{repo}/tree/{branch}/app", "app/"
+            kind = "blob" if "." in rel.split("/")[-1] else "tree"
+            short = "/".join(rel.split("/")[-2:])
+            return f"{repo}/{kind}/{branch}/{rel}", short
+    return None, None
+
+
+def gh_any(m, p):
+    return gh_url(p) if m == "wsl" else gh_url_remote(p)
+
+
 def key(m, p):
     return m + "|" + p
 
@@ -90,6 +139,12 @@ def e(s):
 
 
 def chip(m, p):
+    if VARIANT == "public":
+        url, short = gh_any(m, p)
+        if not url:
+            return ""
+        return (f'<a class="lbtn l-github ghpath" href="{e(url)}" target="_blank" '
+                f'rel="noopener" title="{e(url)}">GitHub · {e(short)}</a>')
     if VARIANT == "gh" and m == "wsl":
         url, short = gh_url(p)
         if not url:
@@ -111,12 +166,15 @@ def chip(m, p):
 
 
 def qlink(m, p, label):
-    if VARIANT == "gh" and m == "wsl":
-        url, _ = gh_url(p)
+    if VARIANT in ("gh", "public"):
+        if VARIANT == "public":
+            url, _ = gh_any(m, p)
+        else:
+            url, _ = gh_url(p) if m == "wsl" else (None, None)
         if not url:
             return ""
         return (f'<a class="qlink ghlink" href="{e(url)}" target="_blank" '
-                f'rel="noopener" title="{e(p)}">{e(label)}</a>')
+                f'rel="noopener" title="{e(url)}">{e(label)}</a>')
     st = ex_state(m, p)
     cls = "qlink" + (" miss" if st is False else "")
     return f'<span class="{cls}" data-m="{m}" data-p="{e(p)}">{e(label)}</span>'
@@ -129,18 +187,31 @@ def link_btn(l):
 
 def render_card(c):
     tags = "".join(f'<span class="tag {TAG_CLASS.get(t, "t-ref")}">{e(t)}</span>' for t in c["tags"])
-    paths = "".join(chip(m, p) for m, p in c["paths"])
-    links = "".join(link_btn(l) for l in c["links"])
+    if VARIANT == "public":
+        kept = [(m, p) for m, p in c["paths"] if gh_any(m, p)[0]]
+        dropped = len(c["paths"]) - len(kept)
+    else:
+        kept, dropped = list(c["paths"]), 0
+    paths = "".join(chip(m, p) for m, p in kept)
+    lks = c["links"]
+    if VARIANT == "public":
+        lks = [l for l in lks if "私有" not in l[2]]
+    links = "".join(link_btn(l) for l in lks)
     quick = ""
     if c["quick"]:
         items = "".join(qlink(m, p, lbl) for lbl, m, p in c["quick"])
         quick = f'<div class="quick"><span class="ql-t">入口</span>{items}</div>'
     reads = f'<div class="reads">读法：{e(c["reads"])}</div>' if c["reads"] else ""
-    search = " ".join([c["title"], c["desc"]] + [p for _, p in c["paths"]] + [q[0] for q in c["quick"]])
+    muted = (f'<div class="muted">（{dropped} 条本机内容未上云，已省略）</div>'
+             if dropped else "")
+    if VARIANT == "public":
+        search = " ".join([c["title"], c["desc"]] + [q[0] for q in c["quick"]])
+    else:
+        search = " ".join([c["title"], c["desc"]] + [p for _, p in kept] + [q[0] for q in c["quick"]])
     return (f'<div class="card" id="{e(c["id"])}" data-s="{e(search.lower())}">'
             f'<div class="ch"><span class="ct">{e(c["title"])}</span>{tags}</div>'
             f'<div class="cd">{e(c["desc"])}</div>{reads}'
-            f'<div class="paths">{paths}</div>{quick}'
+            f'<div class="paths">{paths}</div>{muted}{quick}'
             f'<div class="links">{links}</div></div>')
 
 
@@ -177,7 +248,7 @@ def quick_section():
     for title, how, refs in QUICK:
         jumps = " ".join(f'<a class="jump" href="#{r}">↗ {SHORT.get(r, r)}</a>' for r in refs)
         rows += f'<tr><td class="qk">{e(title)}</td><td>{e(how)}</td><td>{jumps}</td></tr>'
-    return (f'<div class="tablewrap" id="quick"><div class="tcap">我该读哪个？—— 7 条主线路径</div>'
+    return (f'<div class="tablewrap" id="quick"><div class="tcap">我该读哪个？—— {len(QUICK)} 条主线路径</div>'
             f'<table class="qtab"><thead><tr><th>场景</th><th>顺序</th><th>直达</th></tr></thead>'
             f'<tbody>{rows}</tbody></table></div>')
 
@@ -272,8 +343,19 @@ th{color:#333;background:#fafbfc;white-space:nowrap}
 .jump{font-size:11.5px;color:var(--mut);margin-right:5px}
 footer{max-width:1280px;margin:0 auto;padding:10px 20px 40px;color:var(--mut);font-size:12px}
 .hidden{display:none !important}
+.muted{color:var(--mut);font-size:12px;margin-top:4px}
 kbd{background:#eef1f5;border-radius:3px;padding:0 4px;font-size:11px}
-@media (max-width:900px){nav#toc{display:none}.wrap{padding:12px}.cards2{grid-template-columns:1fr}}
+#navbtn{display:none;border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 10px;font-size:12.5px;cursor:pointer;color:var(--fg)}
+#navbtn:hover{border-color:var(--acc);color:var(--acc)}
+#backdrop{display:none}
+@media (max-width:1000px){
+  #navbtn{display:inline-block}
+  nav#toc{display:none;position:fixed;left:0;top:0;bottom:0;width:290px;max-width:86vw;background:#fff;z-index:60;padding:16px 14px;overflow:auto;border-right:1px solid var(--line);box-shadow:0 8px 30px rgba(0,0,0,.18);max-height:100vh}
+  body.nav-open nav#toc{display:block}
+  body.nav-open #backdrop{display:block;position:fixed;inset:0;background:rgba(15,20,30,.32);z-index:50}
+  .wrap{display:block;padding:12px}
+  .cards2{grid-template-columns:1fr}
+}
 """
 
 JS = r"""
@@ -307,6 +389,7 @@ function linkify(el, p, text){
   el.replaceWith(a); return a;
 }
 function applyMode(){
+  if(!MODES || !MODES.length) return;
   document.querySelectorAll(".modebtn").forEach(b=>b.classList.toggle("on", b.dataset.mode===mode));
   document.querySelectorAll(".pchip").forEach(ch=>{
     const m = ch.dataset.m, p = ch.dataset.p, pt = ch.querySelector(".pt");
@@ -360,6 +443,15 @@ function setupSearch(){
 document.addEventListener("DOMContentLoaded", ()=>{
   mode = detectMode();
   document.querySelectorAll(".modebtn").forEach(b=>b.addEventListener("click", ()=>{ mode=b.dataset.mode; applyMode(); }));
+  const nb = document.getElementById("navbtn"), bd = document.getElementById("backdrop");
+  if(nb){ nb.addEventListener("click", ()=>document.body.classList.toggle("nav-open")); }
+  if(bd){ bd.addEventListener("click", ()=>document.body.classList.remove("nav-open")); }
+  document.querySelectorAll("#toc a").forEach(a=>a.addEventListener("click", ()=>{
+    if(window.innerWidth <= 1000) document.body.classList.remove("nav-open");
+  }));
+  window.addEventListener("resize", ()=>{
+    if(window.innerWidth > 1000) document.body.classList.remove("nav-open");
+  });
   applyMode(); setupCopy(); setupSearch();
   const obs = new IntersectionObserver(es=>{
     es.forEach(en=>{ if(!en.isIntersecting) return;
@@ -372,6 +464,67 @@ document.addEventListener("DOMContentLoaded", ()=>{
 """
 
 
+JS_PUBLIC = r"""
+function fallback(txt, cb){
+  const ta=document.createElement("textarea"); ta.value=txt; document.body.appendChild(ta);
+  ta.select(); try{document.execCommand("copy"); cb();}catch(e){} document.body.removeChild(ta);
+}
+function setupCopy(){
+  document.addEventListener("click", ev=>{
+    const b = ev.target.closest(".cp"); if(!b) return;
+    const ch = b.closest(".pchip"); const p = ch.dataset.p;
+    const done = ()=>{ b.textContent="已复制"; setTimeout(()=>b.textContent="复制",1200); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(p).then(done).catch(()=>fallback(p,done));
+    } else fallback(p, done);
+  });
+}
+function norm(s){ return String(s).toLowerCase().replace(/[_\-/.]+/g," ").replace(/\s+/g," ").trim(); }
+function setupSearch(){
+  const q=document.getElementById("q"), cnt=document.getElementById("cnt");
+  const items=()=>document.querySelectorAll(".card, .tablewrap tbody tr");
+  q.addEventListener("input", ()=>{
+    const s=norm(q.value); let n=0;
+    items().forEach(el=>{
+      const t=norm(el.dataset.s || el.textContent);
+      const hit=!s || t.indexOf(s)>=0;
+      el.classList.toggle("hidden", !hit); if(hit) n++;
+    });
+    document.querySelectorAll("h3").forEach(h=>{
+      const sec=h.closest("section"); if(!sec) return;
+      const vis=sec.querySelectorAll(".card:not(.hidden), .tablewrap:not(.hidden)").length>0;
+      h.classList.toggle("hidden", !vis);
+    });
+    cnt.textContent = s ? ("命中 " + n + " 项") : "";
+  });
+}
+document.addEventListener("DOMContentLoaded", ()=>{
+  const nb=document.getElementById("navbtn"), bd=document.getElementById("backdrop");
+  if(nb){ nb.addEventListener("click", ()=>document.body.classList.toggle("nav-open")); }
+  if(bd){ bd.addEventListener("click", ()=>document.body.classList.remove("nav-open")); }
+  document.querySelectorAll("#toc a").forEach(a=>a.addEventListener("click", ()=>{
+    if(window.innerWidth <= 1000) document.body.classList.remove("nav-open");
+  }));
+  window.addEventListener("resize", ()=>{ if(window.innerWidth > 1000) document.body.classList.remove("nav-open"); });
+  setupCopy(); setupSearch();
+  const obs = new IntersectionObserver(es=>{
+    es.forEach(en=>{ if(!en.isIntersecting) return;
+      document.querySelectorAll("#toc .toc-l").forEach(a=>a.classList.remove("cur"));
+      const a=document.querySelector('#toc a[href="#'+en.target.id+'"]'); if(a) a.classList.add("cur");
+    });
+  }, {rootMargin:"-20% 0px -70% 0px"});
+  document.querySelectorAll("section[id]").forEach(s=>obs.observe(s));
+});
+"""
+
+PUBLIC_DROP_TABLES = {"t_gloway", "t_lexar", "t_win"}
+PUBLIC_DROP_CARDS = {"c_lean_wsl"}
+PUBLIC_TITLE_OVERRIDE = {
+    "q3": "Part 3 · 主题参考资料（本机资料，未上云）",
+    "p7": "Part 7 · Lean 环境（云端镜像）",
+}
+
+
 def main():
     global VARIANT
     out_path = os.path.join(HERE, "roadmap.html")
@@ -379,32 +532,56 @@ def main():
     if "--variant=gh" in sys.argv:
         VARIANT = "gh"
         out_path = os.path.join(HERE, "roadmap-gh.html")
+    if "--variant=public" in sys.argv:
+        VARIANT = "public"
+        out_path = os.path.join(HERE, "roadmap-public.html")
     if pos:
         out_path = pos[0]
 
     global ACTIVE_MODULES, ACTIVE_NOTES
-    if VARIANT == "gh":
+    if VARIANT in ("gh", "public"):
         modules = []
         for mod in MODULES:
             parts = []
             for part in mod["parts"]:
-                items = [it for it in part["items"]
-                         if not (isinstance(it, dict) and it.get("id") == "c_lean_wsl")]
-                parts.append({**part, "items": items})
-            modules.append({**mod, "parts": parts})
+                items = []
+                for it in part["items"]:
+                    if isinstance(it, dict) and it.get("type") == "table":
+                        if VARIANT == "public" and it.get("id") in PUBLIC_DROP_TABLES:
+                            continue
+                        items.append(dict(it))
+                    elif isinstance(it, dict) and "id" in it:
+                        if VARIANT == "public" and it["id"] in PUBLIC_DROP_CARDS:
+                            continue
+                        items.append(it)
+                if not items:
+                    continue
+                title = part["title"]
+                if VARIANT == "public":
+                    title = PUBLIC_TITLE_OVERRIDE.get(part["id"], title)
+                parts.append({**part, "title": title, "items": items})
+            if parts:
+                modules.append({**mod, "parts": parts})
         ACTIVE_MODULES = modules
-        ACTIVE_NOTES = [n for n in NOTES if n[0] in ("价值头语义（重要更正）", "Lean 版本")]
+        keep_notes = ("价值头语义（重要更正）", "Lean 版本")
+        ACTIVE_NOTES = [n for n in NOTES if n[0] in keep_notes]
 
-    modes = ["vscode", "remote"] if VARIANT == "gh" else ["vscode", "remote", "wsl"]
+    if VARIANT == "public":
+        modes = []
+    elif VARIANT == "gh":
+        modes = ["vscode", "remote"]
+    else:
+        modes = ["vscode", "remote", "wsl"]
     mode_labels = {"vscode": "Windows · 用 VSCode 跳转", "remote": "在 my-new-linux 上打开",
                    "wsl": "在 WSL 内打开（file://）"}
 
-    suffix = " · GitHub 版" if VARIANT == "gh" else ""
+    suffix = {"gh": " · GitHub 版", "public": " · 公开版（仅云端链接）"}.get(VARIANT, "")
     body = []
     body.append('<header>')
     body.append(f'<h1>{e(META["title"])}{suffix}</h1>')
     body.append(f'<div class="sub">{e(META["subtitle"])} · 生成 {e(META["generated"])} · 单文件离线</div>')
     body.append('<div class="bar">')
+    body.append('<button id="navbtn" type="button" title="展开/收起目录">☰ 目录</button>')
     for m in modes:
         body.append(f'<span class="modebtn" data-mode="{m}">{mode_labels[m]}</span>')
     body.append('<input id="q" type="search" placeholder="搜索：标题 / 路径 / 关键词（如 value head、v1-result）">')
@@ -423,21 +600,25 @@ def main():
             body.append(render_items(part["items"]))
             body.append('</div></section>')
     body.append("</main></div>")
-    if VARIANT == "gh":
+    body.append('<div id="backdrop"></div>')
+    if VARIANT == "public":
+        foot = ('本页为公开版：不含任何本机路径，全部链接均为云端资源（GitHub / HuggingFace / arXiv）。'
+                '窄屏或放大后点左上角「☰ 目录」展开侧栏。')
+    elif VARIANT == "gh":
         foot = ('本页为 GitHub 版：所有 WSL 本机路径均已替换为 GitHub 链接（含新公开的 '
                 'reap-source-code-explain / Lean-source-code-learning-to-know-reap / '
                 'alphaproof-official-materials）；F/E 盘路径保留，Windows 下默认用 VSCode 跳转。')
     else:
         foot = ('路径存在性：⚠ = 当前不存在 / 无标记 = 未校验。'
                 'Windows 下默认「VSCode 跳转」（wsl.localhost 在 mirrored 网络模式不可用）；'
-                'file:// 模式仅在该文件所在机器上可点。')
+                'file:// 模式仅在该文件所在机器上可点。窄屏或放大后点「☰ 目录」展开侧栏。')
     body.append(f'<footer>生成于 {e(META["generated"])} · 重新生成：python3 gen_roadmap.py · {foot}</footer>')
 
     html_doc = ("<!DOCTYPE html>\n<html lang=\"zh-CN\">\n<head>\n<meta charset=\"utf-8\">\n"
                 "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n"
                 f"<title>{e(META['title'])}</title>\n<style>{CSS}</style>\n</head>\n<body>\n"
                 + "\n".join(body) +
-                f"\n<script>{JS.replace('__DISTRO__', META['wsl_distro']).replace('__MODES__', json.dumps(modes))}</script>\n</body>\n</html>\n")
+                f"\n<script>{JS_PUBLIC if VARIANT == 'public' else JS.replace('__DISTRO__', META['wsl_distro']).replace('__MODES__', json.dumps(modes))}</script>\n</body>\n</html>\n")
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(html_doc)
     print("wrote", out_path, len(html_doc), "bytes")
