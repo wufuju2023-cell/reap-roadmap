@@ -161,6 +161,8 @@ TAG_CLASS = {
     "规格": "t-plan", "分析": "t-ref", "预备": "t-prep", "2026": "t-off",
     "Agent": "t-off", "fork": "t-off", "公开镜像": "t-pub", "实验": "t-exp",
     "工作区": "t-code", "基础设施": "t-env", "论文": "t-model",
+    "已跑通": "t-ok", "有实验": "t-ok", "原型": "t-exp", "仅骨架": "t-warn",
+    "主线（预备）": "t-main", "实验性": "t-exp",
 }
 
 M_BADGE = {"wsl": "WSL", "remote": "F/E 远程"}
@@ -387,6 +389,8 @@ h3{font-size:15px;margin:20px 0 10px;color:#000}
 .t-env{background:#f3f0e6;color:#6a5a2a}.t-eval{background:#e8f5e9;color:#2a6}
 .t-plan{background:#eef7e6;color:#4a7}.t-prep{background:#eef1f5;color:#667}
 .t-pub{background:#e8f5e9;color:#1b7f3b}
+.t-ok{background:#dff5e1;color:#14702f}
+.t-warn{background:#fff1d6;color:#8a5a00}
 .cd{color:#3c434c;font-size:13px;margin-top:4px}
 .reads{color:var(--mut);font-size:12px;margin-top:3px}
 .paths{display:flex;flex-direction:column;gap:3px;margin-top:7px}
